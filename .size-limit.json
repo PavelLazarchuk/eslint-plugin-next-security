@@ -1,0 +1,9 @@
+[
+    {
+        "name": "eslint-plugin-next-security",
+        "path": "dist/index.js",
+        "limit": "8 kB",
+        "gzip": true,
+        "ignore": ["eslint", "minimatch"]
+    }
+]
