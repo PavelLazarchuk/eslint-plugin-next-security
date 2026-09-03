@@ -1,6 +1,6 @@
 {
     "name": "eslint-plugin-next-security",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "ESLint rules for the Next.js App Router attack surface: unguarded Server Actions, data-layer imports outside the DAL, unvalidated FormData reaching the database.",
     "license": "MIT",
     "sideEffects": false,
