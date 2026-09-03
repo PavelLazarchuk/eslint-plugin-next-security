@@ -28,11 +28,14 @@ export function collectImports(ast: AstNode): Map<string, ImportBinding> {
 
     for (const statement of ast.body as AstNode[]) {
         if (!isType(statement, 'ImportDeclaration')) continue;
+        if (statement.importKind === 'type') continue;
 
         const source = (statement.source as AstNode).value;
         if (typeof source !== 'string') continue;
 
         for (const specifier of statement.specifiers as AstNode[]) {
+            if (specifier.importKind === 'type') continue;
+
             const local = identifierName(specifier.local);
             if (local === null) continue;
 

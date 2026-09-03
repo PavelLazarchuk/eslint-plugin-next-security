@@ -44,6 +44,21 @@ ruleTester.run('no-data-layer-outside-dal', rule, {
         },
         // No real file — nothing to match a glob against.
         { code: `import { db } from '@/db';`, settings },
+        {
+            code: `import type { User } from '@/db';`,
+            filename: 'src/app/page.tsx',
+            settings,
+        },
+        {
+            code: `import { type User, type Post } from '@/db';`,
+            filename: 'src/app/page.tsx',
+            settings,
+        },
+        {
+            code: `export type { User } from '@/db';`,
+            filename: 'src/app/page.tsx',
+            settings,
+        },
     ],
     invalid: [
         {
@@ -73,6 +88,18 @@ ruleTester.run('no-data-layer-outside-dal', rule, {
         },
         {
             code: `export { db } from '@/db';`,
+            filename: 'src/app/page.tsx',
+            settings,
+            errors: [{ messageId: 'importOutsideDal' }],
+        },
+        {
+            code: `import { db, type User } from '@/db';`,
+            filename: 'src/app/page.tsx',
+            settings,
+            errors: [{ messageId: 'importOutsideDal' }],
+        },
+        {
+            code: `import '@/db';`,
             filename: 'src/app/page.tsx',
             settings,
             errors: [{ messageId: 'importOutsideDal' }],

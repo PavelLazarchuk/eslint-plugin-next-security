@@ -34,6 +34,12 @@ export const SETTINGS_SCHEMA: Record<keyof NextSecuritySettings, JSONSchema4> = 
 
 export type RuleOptions = Record<string, unknown>;
 
+function record(value: unknown): RuleOptions {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as RuleOptions)
+        : {};
+}
+
 function stringList(value: unknown): string[] | null {
     if (!Array.isArray(value)) return null;
     return value.filter((entry): entry is string => typeof entry === 'string');
@@ -44,18 +50,14 @@ export function readSettings(
     options: unknown,
     defaultOptions: RuleOptions = {}
 ): NextSecuritySettings & RuleOptions {
-    const shared = (settings as Record<string, unknown> | undefined)?.[SETTINGS_KEY] ?? {};
-    const own = (options ?? {}) as RuleOptions;
-    const resolved: RuleOptions = {
-        ...DEFAULT_SETTINGS,
-        ...defaultOptions,
-        ...(shared as RuleOptions),
-        ...own,
-    };
+    const shared = record(record(settings)[SETTINGS_KEY]);
+    const own = record(options);
+    const resolved: RuleOptions = { ...DEFAULT_SETTINGS, ...defaultOptions, ...shared, ...own };
 
     for (const key of Object.keys(SETTINGS_SCHEMA))
-        resolved[key] =
-            stringList(resolved[key]) ?? DEFAULT_SETTINGS[key as keyof NextSecuritySettings];
+        resolved[key] = stringList(resolved[key]) ?? [
+            ...DEFAULT_SETTINGS[key as keyof NextSecuritySettings],
+        ];
 
     return resolved as NextSecuritySettings & RuleOptions;
 }

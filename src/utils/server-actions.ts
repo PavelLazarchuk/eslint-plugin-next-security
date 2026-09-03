@@ -83,7 +83,12 @@ export function collectExportedFunctions(ast: AstNode): ExportedFunction[] {
 
     for (const statement of ast.body as AstNode[]) {
         if (isType(statement, 'ExportDefaultDeclaration')) {
-            const fn = actionFunction(statement.declaration);
+            const exportedName = identifierName(statement.declaration);
+            const fn =
+                exportedName === null
+                    ? actionFunction(statement.declaration)
+                    : localBinding(ast, exportedName);
+
             if (fn !== null) out.push({ node: fn, name: 'default' });
             continue;
         }
@@ -108,6 +113,15 @@ export function collectExportedFunctions(ast: AstNode): ExportedFunction[] {
     return out;
 }
 
+export function parameterNames(node: FunctionNode): Set<string> {
+    const names = new Set<string>();
+
+    for (const parameter of (node.params as AstNode[]) ?? [])
+        if (isType(parameter, 'Identifier')) names.add(parameter.name as string);
+
+    return names;
+}
+
 function enclosingCalls(node: AstNode, parents: Map<AstNode, AstNode | null>): AstNode[] {
     const calls: AstNode[] = [];
     let child = node;
@@ -126,12 +140,17 @@ function enclosingCalls(node: AstNode, parents: Map<AstNode, AstNode | null>): A
     return calls;
 }
 
+const actionCache = new WeakMap<AstNode, ServerAction[]>();
+
 /**
  * Every Server Action in a file: the exports of a `'use server'` module and the inline actions a
  * Server Component hands to the client. Both are public HTTP endpoints.
  */
 export function collectServerActions(sourceCode: SourceCodeLike): ServerAction[] {
     const ast = asNode(sourceCode.ast);
+    const cached = actionCache.get(ast);
+    if (cached !== undefined) return cached;
+
     const parents = new Map<AstNode, AstNode | null>();
     const inline: AstNode[] = [];
     const propNames = new Set<string>();
@@ -170,5 +189,8 @@ export function collectServerActions(sourceCode: SourceCodeLike): ServerAction[]
 
     for (const node of inline) add(node, null, 'inline');
 
-    return [...actions.values()];
+    const collected = [...actions.values()];
+    actionCache.set(ast, collected);
+
+    return collected;
 }

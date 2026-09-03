@@ -1,8 +1,8 @@
-import type { AstNode, ServerAction } from '../types';
+import type { AstNode } from '../types';
 import { calleePath, isType } from '../utils/ast';
 import { createRule } from '../utils/createRule';
 import { collectImports, isModuleCallee } from '../utils/names';
-import { collectServerActions } from '../utils/server-actions';
+import { collectServerActions, parameterNames } from '../utils/server-actions';
 import { stringArray } from '../utils/settings';
 import { asVariables, traceTaint, type Scope, type Variable } from '../utils/taint';
 
@@ -11,7 +11,7 @@ interface TypeServices {
     getTypeAtLocation?(node: unknown): unknown;
 }
 
-const FORM_DATA_NAME = /form-?data/i;
+const FORM_DATA_WORD = /(?:^|\.)form\.?data/;
 const FORM_DATA_METHODS = new Set(['get', 'getAll', 'has', 'entries', 'keys', 'values', 'forEach']);
 
 const DEFAULT_TRANSFORMS = [
@@ -21,6 +21,11 @@ const DEFAULT_TRANSFORMS = [
     'Array.from',
     'structuredClone',
 ];
+
+function looksLikeFormData(value: string): boolean {
+    const words = value.split(/[^A-Za-z0-9]+|(?<=[a-z0-9])(?=[A-Z])/);
+    return FORM_DATA_WORD.test(words.join('.').toLowerCase());
+}
 
 function typeName(services: TypeServices | undefined, node: AstNode): string | null {
     if (!services?.program || typeof services.getTypeAtLocation !== 'function') return null;
@@ -41,15 +46,6 @@ function usesFormDataApi(variable: Variable): boolean {
         const property = parent.property as AstNode;
         return isType(property, 'Identifier') && FORM_DATA_METHODS.has(property.name as string);
     });
-}
-
-function parameterNames(action: ServerAction): Set<string> {
-    const names = new Set<string>();
-
-    for (const parameter of (action.node.params as AstNode[]) ?? [])
-        if (isType(parameter, 'Identifier')) names.add(parameter.name as string);
-
-    return names;
 }
 
 export default createRule({
@@ -76,9 +72,9 @@ export default createRule({
 
             if (typed && identifier) {
                 const name = typeName(services, identifier);
-                if (name !== null) return FORM_DATA_NAME.test(name);
+                if (name !== null) return looksLikeFormData(name);
             }
-            return FORM_DATA_NAME.test(variable.name) || usesFormDataApi(variable);
+            return looksLikeFormData(variable.name) || usesFormDataApi(variable);
         };
 
         return {
@@ -86,7 +82,7 @@ export default createRule({
                 const imports = collectImports(program as AstNode);
 
                 for (const action of collectServerActions(sourceCode)) {
-                    const parameters = parameterNames(action);
+                    const parameters = parameterNames(action.node);
                     const roots = asVariables(
                         sourceCode.getDeclaredVariables(action.node as never)
                     ).filter(variable => parameters.has(variable.name) && isFormData(variable));

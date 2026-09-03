@@ -118,6 +118,14 @@ describe('collectServerActions', () => {
         ).toEqual([{ name: 'remove', kind: 'file', exported: true, passedAsProp: false }]);
     });
 
+    it('resolves a default export that names a local binding', () => {
+        expect(
+            summary(`'use server';
+                const remove = withAuth(async () => {});
+                export default remove;`)
+        ).toEqual([{ name: 'default', kind: 'file', exported: true, passedAsProp: false }]);
+    });
+
     it('ignores a specifier that names something other than a function', () => {
         expect(summary(`'use server';\nconst LIMIT = 10;\nexport { LIMIT };`)).toEqual([]);
     });
@@ -140,5 +148,11 @@ describe('collectExportedFunctions', () => {
         expect(
             collectExportedFunctions(parse(`export default () => {};`)).map(entry => entry.name)
         ).toEqual(['default']);
+    });
+
+    it('ignores a default export that names an import', () => {
+        expect(
+            collectExportedFunctions(parse(`import remove from './x';\nexport default remove;`))
+        ).toEqual([]);
     });
 });

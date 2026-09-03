@@ -1,5 +1,5 @@
 import type { AstNode } from '../types';
-import { calleePath, collectCalls, startOf } from '../utils/ast';
+import { calleePath, collectCalls, containsNode, startOf } from '../utils/ast';
 import { createRule } from '../utils/createRule';
 import { collectImports, isModuleCallee } from '../utils/names';
 import { collectServerActions } from '../utils/server-actions';
@@ -8,14 +8,6 @@ import { stringArray } from '../utils/settings';
 const DEFAULT_METHODS = ['parse', 'safeParse', 'parseAsync', 'safeParseAsync'];
 
 const BUILTIN_ROOTS = new Set(['JSON', 'Date', 'Number', 'Math', 'String', 'Boolean']);
-
-function endOf(node: AstNode): number {
-    return node.range?.[1] ?? 0;
-}
-
-function within(outer: AstNode, inner: AstNode): boolean {
-    return startOf(inner) >= startOf(outer) && endOf(inner) <= endOf(outer);
-}
 
 export default createRule({
     name: 'require-input-validation',
@@ -61,7 +53,7 @@ export default createRule({
                     const validated = calls.some(
                         call =>
                             isValidator(call) &&
-                            (startOf(call) < startOf(sink) || within(sink, call))
+                            (startOf(call) < startOf(sink) || containsNode(sink, call))
                     );
                     if (validated) continue;
 

@@ -1,5 +1,5 @@
 import type { AstNode } from '../types';
-import { isType } from '../utils/ast';
+import { isNode, isType } from '../utils/ast';
 import { createRule } from '../utils/createRule';
 import { matchesModule, matchesPath, normalizeFilename } from '../utils/paths';
 
@@ -8,6 +8,19 @@ function moduleSource(node: AstNode): { value: string; node: AstNode } | null {
     if (!isType(source, 'Literal') || typeof source.value !== 'string') return null;
 
     return { value: source.value, node: source };
+}
+
+function isTypeOnly(node: AstNode): boolean {
+    if (node.importKind === 'type' || node.exportKind === 'type') return true;
+
+    const specifiers = node.specifiers;
+    if (!Array.isArray(specifiers) || specifiers.length === 0) return false;
+
+    return specifiers.every(
+        specifier =>
+            isNode(specifier) &&
+            (specifier.importKind === 'type' || specifier.exportKind === 'type')
+    );
 }
 
 export default createRule({
@@ -27,6 +40,8 @@ export default createRule({
         if (filename === null || matchesPath(filename, dal)) return {};
 
         const check = (node: unknown): void => {
+            if (isTypeOnly(node as AstNode)) return;
+
             const source = moduleSource(node as AstNode);
             if (source === null || !matchesModule(source.value, dataLayer)) return;
 

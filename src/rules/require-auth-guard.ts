@@ -1,25 +1,20 @@
 import type { AstNode, ServerAction } from '../types';
-import { calleePath, collectCalls, isType, startOf } from '../utils/ast';
+import { calleePath, collectCalls, startOf } from '../utils/ast';
 import { createRule, docsUrl, pointAt } from '../utils/createRule';
 import { collectImports, matchesCallee, parseNames, type ImportBinding } from '../utils/names';
-import { collectServerActions } from '../utils/server-actions';
+import { collectServerActions, parameterNames } from '../utils/server-actions';
 import { stringArray } from '../utils/settings';
 
 const IGNORED_ROOTS = new Set(['console']);
 
-function parameterNames(action: ServerAction): Set<string> {
-    const names = new Set<string>();
+function significantCalls(
+    action: ServerAction,
+    calls: AstNode[],
+    ignore: (call: AstNode) => boolean
+): AstNode[] {
+    const parameters = parameterNames(action.node);
 
-    for (const parameter of (action.node.params as AstNode[]) ?? [])
-        if (isType(parameter, 'Identifier')) names.add(parameter.name as string);
-
-    return names;
-}
-
-function significantCalls(action: ServerAction, ignore: (call: AstNode) => boolean): AstNode[] {
-    const parameters = parameterNames(action);
-
-    return collectCalls(action.node).filter(call => {
+    return calls.filter(call => {
         const root = calleePath(call.callee as AstNode)[0];
         if (root !== undefined && (parameters.has(root) || IGNORED_ROOTS.has(root))) return false;
         return !ignore(call);
@@ -76,7 +71,8 @@ export default createRule({
                     if (isWrapped(action, imports)) continue;
                     if (action.name !== null && ignoreNames.has(action.name)) continue;
 
-                    const guardCall = collectCalls(action.node).find(isGuard) ?? null;
+                    const calls = collectCalls(action.node);
+                    const guardCall = calls.find(isGuard) ?? null;
 
                     if (guardCall === null) {
                         context.report({
@@ -88,7 +84,7 @@ export default createRule({
                     }
                     if (!requireGuardFirst) continue;
 
-                    const first = significantCalls(action, isGuard)[0];
+                    const first = significantCalls(action, calls, isGuard)[0];
                     if (first !== undefined && startOf(first) < startOf(guardCall))
                         context.report({
                             loc: pointAt(guardCall),

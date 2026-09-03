@@ -1,5 +1,5 @@
 import type { AstNode } from '../types';
-import { identifierName, isNode } from './ast';
+import { containsNode, identifierName, isNode } from './ast';
 
 export function asVariables(value: unknown): Variable[] {
     return value as Variable[];
@@ -50,12 +50,6 @@ const TRANSPARENT = new Set([
     'TSTypeAssertion',
 ]);
 
-function contains(outer: AstNode, inner: AstNode): boolean {
-    const [start, end] = outer.range as [number, number];
-    const [from, to] = inner.range as [number, number];
-    return from >= start && to <= end;
-}
-
 function resolveVariable(scope: Scope | null, name: string): Variable | null {
     let current = scope;
 
@@ -94,7 +88,8 @@ export function traceTaint(query: TaintQuery): TaintFlow[] {
             if (!reference.isRead()) continue;
 
             const identifier = reference.identifier;
-            if (!contains(within, identifier)) continue;
+
+            if (!containsNode(within, identifier)) continue;
 
             let current: AstNode = identifier;
             let parent = isNode(current.parent) ? current.parent : null;

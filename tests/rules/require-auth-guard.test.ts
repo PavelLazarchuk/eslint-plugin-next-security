@@ -108,6 +108,15 @@ ruleTester.run('require-auth-guard', rule, {
     invalid: [
         {
             code: `'use server';
+                async function deleteUser(formData: FormData) {
+                    await db.delete(formData.get('id'));
+                }
+                export default deleteUser;`,
+            settings,
+            errors: [{ messageId: 'missingGuard', data: { name: '"default"', expected } }],
+        },
+        {
+            code: `'use server';
                 export async function deleteUser(formData: FormData) {
                     await db.delete(formData.get('id'));
                 }`,

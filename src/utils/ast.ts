@@ -1,6 +1,16 @@
 import type { AstNode } from '../types';
 
-const SKIP_KEYS = new Set(['parent', 'loc', 'range', 'start', 'end']);
+const SKIP_KEYS = new Set([
+    'parent',
+    'loc',
+    'range',
+    'start',
+    'end',
+    'tokens',
+    'comments',
+    'leadingComments',
+    'trailingComments',
+]);
 
 /** ESLint's published AST types are narrower than the structural nodes this plugin walks. */
 export function asNode(value: unknown): AstNode {
@@ -136,4 +146,12 @@ export function collectCalls(root: AstNode): AstNode[] {
 
 export function startOf(node: AstNode): number {
     return node.range?.[0] ?? 0;
+}
+
+export function endOf(node: AstNode): number {
+    return node.range?.[1] ?? 0;
+}
+
+export function containsNode(outer: AstNode, inner: AstNode): boolean {
+    return startOf(inner) >= startOf(outer) && endOf(inner) <= endOf(outer);
 }

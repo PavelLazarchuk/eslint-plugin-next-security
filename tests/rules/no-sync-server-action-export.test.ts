@@ -19,6 +19,9 @@ ruleTester.run('no-sync-server-action-export', rule, {
         // A wrapper returning an async function.
         `'use server';
             export const create = withAuth(async () => {});`,
+        `'use server';
+            async function update() {}
+            export default update;`,
     ],
     invalid: [
         {
@@ -46,6 +49,12 @@ ruleTester.run('no-sync-server-action-export', rule, {
             code: `'use server';
                 export default () => {};`,
             errors: [{ messageId: 'syncExport', data: { name: '"default"' } }],
+        },
+        {
+            code: `'use server';
+                function update() {}
+                export default update;`,
+            errors: [{ messageId: 'syncExport', data: { name: '"default"' }, line: 2 }],
         },
     ],
 });

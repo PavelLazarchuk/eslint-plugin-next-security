@@ -33,6 +33,14 @@ ruleTester.run('no-raw-formdata-to-db', rule, {
                 }`,
             settings,
         },
+        {
+            code: `'use server';
+                import { db } from '@/db';
+                export async function create(transformData) {
+                    await db.insert(users).values(Object.fromEntries(transformData));
+                }`,
+            settings,
+        },
         // Without types, a parameter neither named nor used like FormData is not tracked.
         {
             code: `'use server';
@@ -106,6 +114,15 @@ ruleTester.run('no-raw-formdata-to-db', rule, {
         },
     ],
     invalid: [
+        {
+            code: `'use server';
+                import { db } from '@/db';
+                export async function create(raw_form_data) {
+                    await db.insert(users).values(raw_form_data);
+                }`,
+            settings,
+            errors: [{ messageId: 'rawFormData' }],
+        },
         {
             code: `'use server';
                 import { db } from '@/db';
